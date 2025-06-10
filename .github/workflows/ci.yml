@@ -45,19 +45,21 @@ jobs:
     - name: Verify application starts
       run: |
         source venv/bin/activate
-        echo "Verifying application can start..."
+        echo "Starting application in background..."
         uvicorn main:app --host 127.0.0.1 --port 8000 --no-access-log &
+
         APP_PID=$!
-        
-        # Wait for the application to start
-        sleep 6
-        
-        # Check if the application is running
-        if ps -p $APP_PID > /dev/null; then
-            echo "Application started successfully"
-            # Kill the application
-            kill $APP_PID
-        else
-            echo "Application failed to start"
-            exit 1 
-        fi
+
+        # Wait for the server to boot
+        for i in {1..10}; do
+            if curl -s http://127.0.0.1:8000/ > /dev/null; then
+                echo "Application is up and responding"
+                kill $APP_PID
+                exit 0
+            fi
+            sleep 1
+        done
+
+        echo "Application failed to start or respond in time"
+        kill $APP_PID
+        exit 1
